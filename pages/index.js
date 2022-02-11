@@ -63,7 +63,7 @@ export async function getServerSideProps(context) {
   let catFactsData = null;
   let status = { "isOk": false, "error": null };
   try {
-    const response = await axios.get('https://catfact.ninaja/facts');
+    const response = await axios.get('https://catfact.ninaj/facts');
     let catFacts = response.data;
     catFactsData = catFacts.data;
     status.isOk = true;
