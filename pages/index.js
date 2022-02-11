@@ -1,6 +1,7 @@
 import Head from 'next/head'
 import axios from 'axios'
-import NFTList from '../components/FactList'
+import { ethers } from 'ethers';
+import { addresses, abis } from '../contracts';
 import {
   Box,
   Button,
@@ -23,6 +24,8 @@ import {
 } from '@chakra-ui/react'
 import { extendTheme } from '@chakra-ui/react'
 import FactList from '../components/FactList'
+import Profile from '../components/Profile'
+
 const colors = {
   brand: {
     // 900: '#1a365d',
@@ -32,7 +35,7 @@ const colors = {
 }
 const theme = extendTheme({ colors });
 
-function Home({ catFactsData, status }) {
+function Home({ catFactsData, status, profile }) {
   return (
     <>
       <Head>
@@ -42,17 +45,16 @@ function Home({ catFactsData, status }) {
       </Head>
       <ChakraProvider theme={theme}>
         <CSSReset />
-        <Box w={500} p={4} m="20px auto">
+        <Box w={800} p={4} m="20px auto">
           <Heading as="h1" size="xl" textAlign="center" m={5}>
-            Chakra Example h1
+            Chakra Example
           </Heading>
           <Box as="p" textAlign="center">
-            Example using Nextjs and{' '}
-            <Link href="https://chakra-ui.com" isExternal>
-              Chakra <Icon name="external-link" mx="2px" />
-            </Link>
+            <Profile profile={profile}>Profile</Profile>
           </Box>
-          <FactList factsData={catFactsData} status={status}></FactList>
+          <Box as="p" textAlign="center">
+            <FactList factsData={catFactsData} status={status}></FactList>
+          </Box>
         </Box>
       </ChakraProvider>
     </>
@@ -62,16 +64,24 @@ function Home({ catFactsData, status }) {
 export async function getServerSideProps(context) {
   let catFactsData = null;
   let status = { "isOk": false, "error": null };
+  const profileId = 26;
   try {
+    // const provider = "https://polygon-mumbai.g.alchemy.com/v2/Pld6XQBC-Jcd2Ls10sPWEG2IsgjCsO4N";
+    const provider = new ethers.providers.AlchemyProvider("maticmum");
+    const lensHub = new ethers.Contract(addresses.lensHubProxy, abis.lensHubProxy, provider);
+    let profile = await lensHub.getProfile(profileId);
+    profile = JSON.parse(JSON.stringify(profile)); // hack to bypass dummy errors
+    console.log(`profile ${JSON.stringify(profile)}`)
     const response = await axios.get('https://catfact.ninja/facts');
     let catFacts = response.data;
     catFactsData = catFacts.data;
     status.isOk = true;
-    return { props: { catFactsData, status } }
+    return { props: { catFactsData, status, profile } }
   } catch (error) {
+    console.log(`status ${JSON.stringify(error)}`)
     status.error = error.response?.data ?? { "code": null, "message": "No message" };
     console.log(`status ${JSON.stringify(status)}`)
-    return { props: { catFactsData, status } }
+    return { props: { catFactsData, status, profile } }
   }
 }
 
