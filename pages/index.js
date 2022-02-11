@@ -1,4 +1,6 @@
 import Head from 'next/head'
+import axios from 'axios'
+import NFTList from '../components/FactList'
 import {
   Box,
   Button,
@@ -20,6 +22,7 @@ import {
   Textarea
 } from '@chakra-ui/react'
 import { extendTheme } from '@chakra-ui/react'
+import FactList from '../components/FactList'
 const colors = {
   brand: {
     // 900: '#1a365d',
@@ -29,7 +32,7 @@ const colors = {
 }
 const theme = extendTheme({ colors });
 
-export default function Home() {
+function Home({ catFactsData, status }) {
   return (
     <>
       <Head>
@@ -40,11 +43,8 @@ export default function Home() {
       <ChakraProvider theme={theme}>
         <CSSReset />
         <Box w={500} p={4} m="20px auto">
-          <Heading as="h1" size="xl" textAlign="center">
+          <Heading as="h1" size="xl" textAlign="center" m={5}>
             Chakra Example h1
-          </Heading>
-          <Heading as="h2" size="l" textAlign="center" m={5}>
-            Chakra Example h2
           </Heading>
           <Box as="p" textAlign="center">
             Example using Nextjs and{' '}
@@ -52,8 +52,27 @@ export default function Home() {
               Chakra <Icon name="external-link" mx="2px" />
             </Link>
           </Box>
+          <FactList factsData={catFactsData} status={status}></FactList>
         </Box>
       </ChakraProvider>
     </>
   )
 }
+
+export async function getServerSideProps(context) {
+  let catFactsData = null;
+  let status = { "isOk": false, "error": null };
+  try {
+    const response = await axios.get('https://catfact.ninaja/facts');
+    let catFacts = response.data;
+    catFactsData = catFacts.data;
+    status.isOk = true;
+    return { props: { catFactsData, status } }
+  } catch (error) {
+    status.error = error.response?.data ?? { "code": null, "message": "No message" };
+    console.log(`status ${JSON.stringify(status)}`)
+    return { props: { catFactsData, status } }
+  }
+}
+
+export default Home
