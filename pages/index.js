@@ -24,6 +24,7 @@ import {
 } from '@chakra-ui/react'
 import { extendTheme } from '@chakra-ui/react'
 import FactList from '../components/FactList'
+import PubList from '../components/PubList'
 import Profile from '../components/Profile'
 
 const colors = {
@@ -35,7 +36,7 @@ const colors = {
 }
 const theme = extendTheme({ colors });
 
-function Home({ catFactsData, status, profile }) {
+function Home({ catFactsData, status, profile, pubArray }) {
   return (
     <>
       <Head>
@@ -51,6 +52,9 @@ function Home({ catFactsData, status, profile }) {
           </Heading>
           <Box as="p" textAlign="center">
             <Profile profile={profile}>Profile</Profile>
+          </Box>
+          <Box as="p">
+            <PubList pubArray={pubArray} status={status}></PubList>
           </Box>
           <Box as="p" textAlign="center">
             <FactList factsData={catFactsData} status={status}></FactList>
@@ -69,16 +73,31 @@ export async function getServerSideProps(context) {
     // const provider = "https://polygon-mumbai.g.alchemy.com/v2/Pld6XQBC-Jcd2Ls10sPWEG2IsgjCsO4N";
     const provider = new ethers.providers.AlchemyProvider("maticmum");
     const lensHub = new ethers.Contract(addresses.lensHubProxy, abis.lensHubProxy, provider);
+    // profile
     let profile = await lensHub.getProfile(profileId);
     profile = JSON.parse(JSON.stringify(profile)); // hack to bypass dummy errors
     console.log(`profile ${JSON.stringify(profile)}`)
+    // publications
+    let pubCount = profile[0];
+    pubCount = ethers.BigNumber.from(pubCount.hex).toNumber();
+    let pub;
+    let pubArray = []
+    for (let pubId = 0; pubId < pubCount; pubId++) {
+      pub = await lensHub.getPub(profileId, pubId);
+      pubArray[pubId] = pub;
+      console.log(`pub ${pubId} : ${JSON.stringify(pub)}`)
+    }
+    pubArray = JSON.parse(JSON.stringify(pubArray)); // hack to bypass dummy errors
+
+    // catfacts
     const response = await axios.get('https://catfact.ninja/facts');
     let catFacts = response.data;
     catFactsData = catFacts.data;
+
     status.isOk = true;
-    return { props: { catFactsData, status, profile } }
+    return { props: { catFactsData, status, profile, pubArray } }
   } catch (error) {
-    console.log(`status ${JSON.stringify(error)}`)
+    console.log(`error ${JSON.stringify(error)}`)
     status.error = error.response?.data ?? { "code": null, "message": "No message" };
     console.log(`status ${JSON.stringify(status)}`)
     return { props: { catFactsData, status, profile } }
